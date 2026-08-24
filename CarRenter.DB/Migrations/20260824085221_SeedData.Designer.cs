@@ -4,6 +4,7 @@ using CarRenter.DB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CarRenter.DB.Migrations
 {
     [DbContext(typeof(CarRenterDbContext))]
-    partial class CarRenterDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824085221_SeedData")]
+    partial class SeedData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -51,7 +54,7 @@ namespace CarRenter.DB.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Addresses");
+                    b.ToTable("Address");
                 });
 
             modelBuilder.Entity("CarRenter.DB.Models.Car", b =>
@@ -76,7 +79,7 @@ namespace CarRenter.DB.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cars");
+                    b.ToTable("Car");
 
                     b.HasData(
                         new
@@ -156,7 +159,7 @@ namespace CarRenter.DB.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Preferences");
+                    b.ToTable("Preference");
 
                     b.HasData(
                         new
@@ -243,7 +246,7 @@ namespace CarRenter.DB.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Reservations");
+                    b.ToTable("Reservation");
                 });
 
             modelBuilder.Entity("CarRenter.DB.Models.User", b =>
@@ -286,7 +289,7 @@ namespace CarRenter.DB.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("User");
                 });
 
             modelBuilder.Entity("PreferenceReservation", b =>

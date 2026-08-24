@@ -1,4 +1,5 @@
 ﻿using CarRenter.DB.Models;
+using CarRenter.DB.Seed;
 using Microsoft.EntityFrameworkCore;
 
 namespace CarRenter.DB;
@@ -9,6 +10,12 @@ public class CarRenterDbContext: DbContext
    
    public CarRenterDbContext(DbContextOptions<CarRenterDbContext> options)
       : base(options) { }
+   
+   public DbSet<User> Users { get; set; }
+   public DbSet<Address> Addresses { get; set; }
+   public DbSet<Car> Cars { get; set; }
+   public DbSet<Reservation> Reservations { get; set; }
+   public DbSet<Preference> Preferences { get; set; }
    
    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
    {
@@ -60,5 +67,7 @@ public class CarRenterDbContext: DbContext
            .Property(r => r.TotalPrice)
            .HasColumnType("decimal(18,2)");
        
+       
+       modelBuilder.Seed();
    }
 }
