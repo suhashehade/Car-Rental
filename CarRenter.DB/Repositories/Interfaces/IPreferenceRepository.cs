@@ -1,0 +1,8 @@
+﻿using CarRenter.DB.Models;
+
+namespace CarRenter.DB.Repositories.Interfaces;
+
+public interface IPreferenceRepository : IGenericRepository<Preference>
+{
+    
+}

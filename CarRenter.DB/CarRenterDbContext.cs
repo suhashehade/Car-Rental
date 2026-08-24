@@ -1,17 +1,17 @@
 ﻿using CarRenter.DB.Models;
 using CarRenter.DB.Seed;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CarRenter.DB;
 
-public class CarRenterDbContext: DbContext
+public class CarRenterDbContext: IdentityDbContext<User>
 {
    public CarRenterDbContext() { }
    
    public CarRenterDbContext(DbContextOptions<CarRenterDbContext> options)
       : base(options) { }
    
-   public DbSet<User> Users { get; set; }
    public DbSet<Address> Addresses { get; set; }
    public DbSet<Car> Cars { get; set; }
    public DbSet<Reservation> Reservations { get; set; }
@@ -28,6 +28,8 @@ public class CarRenterDbContext: DbContext
    protected override void OnModelCreating(ModelBuilder modelBuilder)
    {
        base.OnModelCreating(modelBuilder);
+       modelBuilder.Entity<User>().ToTable("Users");
+       
        modelBuilder.Entity<User>()
            .HasIndex(u => u.Email)
            .IsUnique();
