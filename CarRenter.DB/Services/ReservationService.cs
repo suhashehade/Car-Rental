@@ -29,7 +29,8 @@ public class ReservationService : IReservationService
         var totalHours = (decimal)(endDate - startDate).TotalHours;
         if (totalHours <= 0)
         {
-            throw new Exception("The end date must be greater than start date");
+            // ❌ ArgumentException لأن المشكلة بالمدخلات (التواريخ)
+            throw new ArgumentException("The end date must be greater than start date.");
         }
 
         return totalHours * car.HourlyPrice; 
@@ -45,7 +46,8 @@ public class ReservationService : IReservationService
         var car = await GetCar(createReservationDto.CarId);
         if (car == null)      
         {
-            throw new Exception("The car does not exist");
+            // ❌ KeyNotFoundException للتعبير عن عدم وجود العنصر (404)
+            throw new KeyNotFoundException($"Car with ID '{createReservationDto.CarId}' was not found.");
         }
 
         bool isUserReserve = await HasUserOverlapAsync(createReservationDto.UserId, createReservationDto.StartDate, createReservationDto.EndDate);
@@ -53,12 +55,13 @@ public class ReservationService : IReservationService
         
         if (isUserReserve)
         {
-            throw new Exception("You already have a conflicting reservation during this period.");
+            // ❌ InvalidOperationException لتعارض قواعد العمل (400/409)
+            throw new InvalidOperationException("You already have a conflicting reservation during this period.");
         }
 
         if (isCarReserved)
         {
-            throw new Exception("The car is already reserved during this period.");
+            throw new InvalidOperationException("The car is already reserved during this period.");
         }
 
         var totalPrice = CalculateTotalPrice(createReservationDto.StartDate, createReservationDto.EndDate, car);
@@ -90,13 +93,15 @@ public class ReservationService : IReservationService
     {
         var reservationEntity = await _unitOfWork.Reservations.GetByIdAsync(id);
         if (reservationEntity == null) return null;
+
         var car = await GetCar(reservationEntity.CarId);
+
         return new ReservationResponseDto()
         {
             ReservationId = reservationEntity.Id,
             StartDate = reservationEntity.StartDate,
             EndDate = reservationEntity.EndDate,
-            CarName = reservationEntity.Car?.Brand + " " + reservationEntity.Car?.Model,
+            CarName = car != null ? $"{car.Brand} {car.Model}" : "N/A",
             TotalPrice = reservationEntity.TotalPrice,
         };
     }
@@ -104,20 +109,21 @@ public class ReservationService : IReservationService
     public async Task<IEnumerable<ReservationResponseDto>> GetReservationsByUserIdAsync(string userId)
     {
         var reservations = await _unitOfWork.Reservations.GetReservationsWithDetailsByUserIdAsync(userId);
-        if (reservations == null)
+
+        var enumerable = reservations as Reservation[] ?? reservations.ToArray();
+        if (enumerable.Length == 0)
         {
-            throw new Exception("The reservation does not exist");
+            return [];
         }
-        
-        return reservations.Select(reservation => new ReservationResponseDto()
-            {
-                ReservationId = reservation.Id,
-                StartDate = reservation.StartDate,
-                EndDate = reservation.EndDate,
-                CarName = reservation.Car?.Brand + " " + reservation.Car?.Model,
-                TotalPrice = reservation.TotalPrice,
-            })
-            .ToList();
+    
+        return enumerable.Select(reservation => new ReservationResponseDto()
+        {
+            ReservationId = reservation.Id,
+            StartDate = reservation.StartDate,
+            EndDate = reservation.EndDate,
+            CarName = $"{reservation.Car.Brand} {reservation.Car.Model}",
+            TotalPrice = reservation.TotalPrice,
+        }).ToList();
     }
 
     public async Task<bool> CancelReservationAsync(string id)
@@ -138,7 +144,7 @@ public class ReservationService : IReservationService
         var car = await GetCar(updateReservationDto.CarId);
         if (car == null)      
         {
-            throw new Exception("The car does not exist");
+            throw new KeyNotFoundException($"Car with ID '{updateReservationDto.CarId}' was not found.");
         }
         
         bool isUserReserve = await HasUserOverlapAsync(reservationEntity.UserId, updateReservationDto.StartDate, updateReservationDto.EndDate, reservationId);
@@ -146,7 +152,7 @@ public class ReservationService : IReservationService
 
         if (isUserReserve || isCarReserved)
         {
-            throw new Exception("Reservation dates conflict with an existing booking.");
+            throw new InvalidOperationException("Reservation dates conflict with an existing booking.");
         }
 
         var totalPrice = CalculateTotalPrice(updateReservationDto.StartDate, updateReservationDto.EndDate, car);
@@ -162,5 +168,4 @@ public class ReservationService : IReservationService
     
         return true;
     }
-    
 }
