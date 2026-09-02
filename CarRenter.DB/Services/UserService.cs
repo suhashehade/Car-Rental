@@ -1,6 +1,8 @@
-﻿using CarRenter.DB.Models;
+﻿
+using CarRenter.DB.Models;
 using CarRenter.DB.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace CarRenter.DB.Services;
 
@@ -21,6 +23,11 @@ public class UserService: IUserService
     public async Task<IdentityResult> RegisterUserAsync(User user, string password)
     {
         return await _userManager.CreateAsync(user, password);
+    }
+
+    public async Task<bool> IsDriverLicenseNumberExistsAsync(string driverLicenseNumber)
+    {
+        return await _userManager.Users.AnyAsync(u => u.DriverLicenseNumber == driverLicenseNumber);
     }
 
     public async Task<bool> CheckPasswordAsync(User user, string password)

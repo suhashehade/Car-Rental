@@ -27,12 +27,20 @@ public static class UserEndpoints
         }
         
         var existingUser = await userService.GetUserByEmailAsync(dto.Email);
-
         if (existingUser != null)
         {
             return Results.Conflict(new { Message = "This user is already exist"});
         }
 
+        if (!string.IsNullOrEmpty(dto.DriverLicenseNumber))
+        {
+            var isLicenseExists = await userService.IsDriverLicenseNumberExistsAsync(dto.DriverLicenseNumber);
+            if (isLicenseExists)
+            {
+                return Results.Conflict(new { Message = "This user is already registered with the same driver licence number"});
+            }
+        }
+        
         var newUser = new User()
         {
             UserName = dto.Email,
