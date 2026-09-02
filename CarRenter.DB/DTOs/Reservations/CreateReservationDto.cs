@@ -6,5 +6,4 @@ public class CreateReservationDto
     public DateTime EndDate { get; set; }
     public string Location { get; set; } = string.Empty;
     public string CarId  { get; set; } = string.Empty;
-    public string UserId { get; set; } = string.Empty;
 }

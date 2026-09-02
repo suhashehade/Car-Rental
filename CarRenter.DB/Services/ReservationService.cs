@@ -52,16 +52,16 @@ public class ReservationService : IReservationService
         return await _userManager.FindByEmailAsync(email);
     }
     
-    public async Task<ReservationResponseDto> CreateReservationAsync(CreateReservationDto createReservationDto)
+    public async Task<ReservationResponseDto> CreateReservationAsync(string userId,CreateReservationDto createReservationDto)
     {
         var car = await GetCar(createReservationDto.CarId);
-        var user = await GetUserById(createReservationDto.UserId);
+        //var user = await GetUserById(createReservationDto.UserId);
         if (car == null)      
         {
             throw new KeyNotFoundException($"Car with ID '{createReservationDto.CarId}' was not found.");
         }
 
-        bool isUserReserve = await HasUserOverlapAsync(createReservationDto.UserId, createReservationDto.StartDate, createReservationDto.EndDate);
+        bool isUserReserve = await HasUserOverlapAsync(userId, createReservationDto.StartDate, createReservationDto.EndDate);
         bool isCarReserved = await HasCarOverlapAsync(createReservationDto.CarId, createReservationDto.StartDate, createReservationDto.EndDate);
         
         if (isUserReserve)
@@ -81,7 +81,7 @@ public class ReservationService : IReservationService
             CarId = createReservationDto.CarId,
             StartDate = createReservationDto.StartDate,
             EndDate = createReservationDto.EndDate,
-            UserId = createReservationDto.UserId,
+            UserId = userId,
             Location = createReservationDto.Location,
             TotalPrice = totalPrice,
         };

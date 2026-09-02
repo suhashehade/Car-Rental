@@ -8,6 +8,7 @@ using CarRenter.DB.Seed;
 using CarRenter.DB.Services;
 using CarRenter.DB.Services.Interfaces;
 using CarRenter.Endpoints;
+using CarRenter.Middlewares;
 using CarRenter.Validators;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -47,6 +48,8 @@ internal abstract class MainClass
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         builder.Services.AddScoped<ICarService, CarService>();
+        builder.Services.AddScoped<IReservationService, ReservationService>();
+     
         
         builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
         builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -85,10 +88,12 @@ internal abstract class MainClass
             });
 
         builder.Services.AddAuthorization();
-  
+        builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+        builder.Services.AddProblemDetails();
         
         var app = builder.Build();
         
+       
         app.UseAuthentication();
         app.UseAuthorization(); 
         
@@ -110,7 +115,7 @@ internal abstract class MainClass
         }
 
         app.UseHttpsRedirection();
-
+        app.UseExceptionHandler();
         await app.RunAsync();
     }
 }
