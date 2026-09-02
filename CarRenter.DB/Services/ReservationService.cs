@@ -2,14 +2,16 @@
 using CarRenter.DB.Models;
 using CarRenter.DB.Repositories.Interfaces;
 using CarRenter.DB.Services.Interfaces;
+using Microsoft.AspNetCore.Identity;
 
 namespace CarRenter.DB.Services;
 
 public class ReservationService : IReservationService
 {
     private readonly IUnitOfWork _unitOfWork;
-
-    public ReservationService(IUnitOfWork unitOfWork)
+    private readonly UserManager<User> _userManager;
+    
+    public ReservationService(IUnitOfWork unitOfWork, UserManager<User> userManager)
     {
         _unitOfWork = unitOfWork;
     }
@@ -29,7 +31,6 @@ public class ReservationService : IReservationService
         var totalHours = (decimal)(endDate - startDate).TotalHours;
         if (totalHours <= 0)
         {
-            // ❌ ArgumentException لأن المشكلة بالمدخلات (التواريخ)
             throw new ArgumentException("The end date must be greater than start date.");
         }
 
@@ -41,12 +42,22 @@ public class ReservationService : IReservationService
         return await _unitOfWork.Cars.GetByIdAsync(carId);
     }
     
+    private async Task<User?> GetUserById(string userId)
+    {
+        return await _userManager.FindByIdAsync(userId);
+    }
+    
+    private async Task<User?> GetUserByEmail(string email)
+    {
+        return await _userManager.FindByEmailAsync(email);
+    }
+    
     public async Task<ReservationResponseDto> CreateReservationAsync(CreateReservationDto createReservationDto)
     {
         var car = await GetCar(createReservationDto.CarId);
+        var user = await GetUserById(createReservationDto.UserId);
         if (car == null)      
         {
-            // ❌ KeyNotFoundException للتعبير عن عدم وجود العنصر (404)
             throw new KeyNotFoundException($"Car with ID '{createReservationDto.CarId}' was not found.");
         }
 
@@ -55,7 +66,6 @@ public class ReservationService : IReservationService
         
         if (isUserReserve)
         {
-            // ❌ InvalidOperationException لتعارض قواعد العمل (400/409)
             throw new InvalidOperationException("You already have a conflicting reservation during this period.");
         }
 

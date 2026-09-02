@@ -1,5 +1,7 @@
 ﻿using CarRenter.DB.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CarRenter.DB.Seed;
 
@@ -86,5 +88,20 @@ public static class DatabaseSeeder
                 HourlyPrice = 35.00m 
             }
         );
+    }
+    public static async Task SeedRolesAsync(IServiceProvider serviceProvider)
+    {
+        var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        string[] roleNames = ["Admin", "Customer"];
+
+        foreach (var roleName in roleNames)
+        {
+            var roleExist = await roleManager.RoleExistsAsync(roleName);
+            if (!roleExist)
+            {
+                await roleManager.CreateAsync(new IdentityRole(roleName));
+            }
+        }
     }
 }

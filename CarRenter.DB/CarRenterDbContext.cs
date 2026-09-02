@@ -45,9 +45,9 @@ public class CarRenterDbContext: IdentityDbContext<User>
            .OnDelete(DeleteBehavior.Cascade);
        
        modelBuilder.Entity<User>()
-           .HasMany<Address>(u => u.Addresses)
+           .HasOne<Address>(u => u.Address)
            .WithOne(a => a.User)
-           .HasForeignKey(a => a.UserId)
+           .HasForeignKey<Address>(a => a.UserId)
            .OnDelete(DeleteBehavior.Cascade);
 
        modelBuilder.Entity<Reservation>()

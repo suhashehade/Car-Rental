@@ -9,6 +9,6 @@ public class User: IdentityUser
         public DateTime DateOfBirth { get; set; }
         public string DriverLicenseNumber { get; set; } = string.Empty;
 
-        public ICollection<Address>? Addresses { get; set; } = new List<Address>();
+        public Address? Address { get; set; } = new Address();
         public ICollection<Reservation>? Reservations { get; set; } = new List<Reservation>();
 }
