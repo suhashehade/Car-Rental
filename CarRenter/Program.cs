@@ -2,6 +2,8 @@ using System.Text;
 using CarRenter.DB;
 using CarRenter.DB.Configurations;
 using CarRenter.DB.Models;
+using CarRenter.DB.Repositories;
+using CarRenter.DB.Repositories.Interfaces;
 using CarRenter.DB.Seed;
 using CarRenter.DB.Services;
 using CarRenter.DB.Services.Interfaces;
@@ -43,6 +45,8 @@ internal abstract class MainClass
             .AddDefaultTokenProviders();
        
         builder.Services.AddScoped<IUserService, UserService>();
+        builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+        builder.Services.AddScoped<ICarService, CarService>();
         
         builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
         builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -98,6 +102,7 @@ internal abstract class MainClass
 
         app.MapUserEndpoints();
         app.MapReservationEndpoints();
+        app.MapCarEndpoints();
 
         if (app.Environment.IsDevelopment())
         {

@@ -9,13 +9,15 @@ namespace CarRenter.DB.Services;
 
 public class CarService(IUnitOfWork unitOfWork) : ICarService
 {
-    public async Task<IEnumerable<AvailableCarDto>> GetAvailableCarsAsync()
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
+
+    public async Task<IEnumerable<CarDto>> GetAvailableCarsAsync()
     {
         var cars = await unitOfWork.Cars.GetAvailableCarsAsync();
         
-        var carDtos = cars.Select(car => new AvailableCarDto
+        var carDtos = cars.Select(car => new CarDto
         {
-            CarId = car.Id,
+            Id = car.Id,
             Brand = car.Brand,
             Model = car.Model,
             Color = car.Color,
@@ -25,15 +27,20 @@ public class CarService(IUnitOfWork unitOfWork) : ICarService
         return carDtos;
     }
 
-    public async Task<AvailableCarDto?> GetCarByIdAsync(string carId)
+    public async Task<IEnumerable<CarResponseDto>> SearchAvailableCarsAsync(CarSearchFilterDto filter)
+    {
+        return await _unitOfWork.Cars.SearchCarsAsync(filter);
+    }
+
+    public async Task<CarDto?> GetCarByIdAsync(string carId)
     {
         var car = await unitOfWork.Cars.GetByIdAsync(carId);
         
         if (car == null) return null;
         
-        var carDto = new AvailableCarDto()
+        var carDto = new CarDto()
         {
-            CarId = carId,
+            Id = carId,
             Brand = car.Brand,
             Model = car.Model,
             Color = car.Color,
@@ -42,7 +49,7 @@ public class CarService(IUnitOfWork unitOfWork) : ICarService
         return carDto;
     }
 
-    public async Task<AvailableCarDto> CreateCarAsync(CreateCarDto createCarDto)
+    public async Task<CarDto> CreateCarAsync(CreateCarDto createCarDto)
     {
         var carEntity = new Car()
         {
@@ -55,9 +62,9 @@ public class CarService(IUnitOfWork unitOfWork) : ICarService
         await unitOfWork.Cars.AddAsync(carEntity);
         await unitOfWork.CompleteAsync();
         
-        var carDto = new AvailableCarDto()
+        var carDto = new CarDto()
         {
-            CarId = carEntity.Id,
+            Id = carEntity.Id,
             Brand = carEntity.Brand,
             Model = carEntity.Model,
             Color = carEntity.Color,
@@ -66,7 +73,7 @@ public class CarService(IUnitOfWork unitOfWork) : ICarService
         return carDto;
     }
 
-    public async Task<bool> UpdateCarAsync(string carId, UpdateCarDto updateCarDto)
+    public async Task<bool> UpdateCarAsync(string carId, CarDto updateCarDto)
     {
         var carEntity = await unitOfWork.Cars.GetByIdAsync(carId);
         

@@ -4,9 +4,10 @@ namespace CarRenter.DB.Services.Interfaces;
 
 public interface ICarService
 {
-    Task<IEnumerable<AvailableCarDto>> GetAvailableCarsAsync();
-    Task<AvailableCarDto?> GetCarByIdAsync(string carId);
-    Task<AvailableCarDto> CreateCarAsync(CreateCarDto createCarDto);
-    Task<bool> UpdateCarAsync(string carId, UpdateCarDto updateCarDto);
+    Task<IEnumerable<CarDto>> GetAvailableCarsAsync();
+    Task<IEnumerable<CarResponseDto>> SearchAvailableCarsAsync(CarSearchFilterDto filter);
+    Task<CarDto?> GetCarByIdAsync(string carId);
+    Task<CarDto> CreateCarAsync(CreateCarDto createCarDto);
+    Task<bool> UpdateCarAsync(string carId, CarDto updateCarDto);
     Task<bool> DeleteCarAsync(string carId);
 }
