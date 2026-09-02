@@ -19,7 +19,6 @@ public static class UserEndpoints
     private static async Task<IResult> RegisterUser(RegisterDto dto, IUserService userService, IValidator<RegisterDto> validator)
     {
         var validationResult = await validator.ValidateAsync(dto);
-
         if (!validationResult.IsValid)
         {
             var errors = validationResult.Errors.Select(e => e.ErrorMessage);
@@ -64,8 +63,36 @@ public static class UserEndpoints
             : Results.Ok(new { Message = "Successfully registered" });
     }
 
-    private static async Task<IResult> LoginUser(LoginDto dto, IUserService userService)
+    private static async Task<IResult> LoginUser(LoginDto dto, IUserService userService, IValidator<LoginDto> validator, IJwtTokenGenerator tokenGenerator)
     {
-        return Results.Ok();
+        var validationResult = await validator.ValidateAsync(dto);
+        if (!validationResult.IsValid)
+        {
+            var errors = validationResult.Errors.Select(e => e.ErrorMessage);
+            return Results.BadRequest(new { Errors = errors });
+        }
+        
+        var user = await userService.GetUserByEmailAsync(dto.Email);
+        if (user == null)
+        {
+            return Results.BadRequest(new { Message = "Invalid email or password"});
+        }
+        
+        var isPasswordValid = await userService.CheckPasswordAsync(user, dto.Password);
+        if (!isPasswordValid)
+        {
+            return Results.Unauthorized(); 
+        }
+        
+        var userRoles = await userService.GetUserRolesAsync(user);
+        var token = tokenGenerator.GenerateToken(
+            user,
+            userRoles
+        );
+
+        return Results.Ok(new
+        {
+            token
+        });
     }
 }

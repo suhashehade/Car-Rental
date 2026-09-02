@@ -1,4 +1,6 @@
+using System.Text;
 using CarRenter.DB;
+using CarRenter.DB.Configurations;
 using CarRenter.DB.Models;
 using CarRenter.DB.Seed;
 using CarRenter.DB.Services;
@@ -6,8 +8,10 @@ using CarRenter.DB.Services.Interfaces;
 using CarRenter.Endpoints;
 using CarRenter.Validators;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CarRenter;
 
@@ -38,12 +42,51 @@ internal abstract class MainClass
             .AddEntityFrameworkStores<CarRenterDbContext>() 
             .AddDefaultTokenProviders();
        
-        
         builder.Services.AddScoped<IUserService, UserService>();
         
-        builder.Services.AddValidatorsFromAssembly(typeof(MainClass).Assembly);
+        builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
+        builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        
+        builder.Services.AddValidatorsFromAssemblies(new[]
+        {
+            typeof(MainClass).Assembly,                     
+            typeof(RegisterUserDtoValidator).Assembly,
+            typeof(LoginValidator).Assembly       
+        });
+        
+        var jwtConfig = builder.Configuration.GetSection("JwtConfig").Get<JwtConfig>();
+
+
+        builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtConfig!.Issuer,
+        
+                    ValidateAudience = true,
+                    ValidAudience = jwtConfig.Audience,
+        
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.Key)),
+        
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+        builder.Services.AddAuthorization();
+  
         
         var app = builder.Build();
+        
+        app.UseAuthentication();
+        app.UseAuthorization(); 
         
         using (var scope = app.Services.CreateScope())
         {
@@ -52,8 +95,9 @@ internal abstract class MainClass
         }
 
         app.MapGet("/", () => "Hello World!");
-        
+
         app.MapUserEndpoints();
+        app.MapReservationEndpoints();
 
         if (app.Environment.IsDevelopment())
         {
