@@ -16,6 +16,11 @@ public class ReservationRepository(CarRenterDbContext context)
             .Where(r => r.UserId == userId)
             .ToListAsync();
     }
+    
+    public async Task<Reservation?> GetReservationByIdAndUserIdAsync(string id, string userId)
+    {
+        return await _context.Reservations.FirstOrDefaultAsync( r => r.Id == id && r.UserId == userId);
+    }
 
     
     public async Task<bool> HasUserOverlapAsync(string userId, DateTime startDate, DateTime endDate, string? currentReservationId = null)

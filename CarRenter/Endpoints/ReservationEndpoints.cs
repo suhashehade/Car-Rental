@@ -15,7 +15,8 @@ public static class ReservationEndpoints
         
         group.MapGet("/", () => "Hi Registers!").RequireAuthorization(new AuthorizeAttribute{ Roles = "Admin" });
         group.MapPost("/", CreateReservation);
-        
+        group.MapGet("/user-reservations", GetReservationByUserId);
+        group.MapDelete("/{id}", CancelReservation);
     }
 
     private static async Task<IResult> CreateReservation(
@@ -42,5 +43,46 @@ public static class ReservationEndpoints
             var result = await reservationService.CreateReservationAsync(userId, dto);
             return Results.Ok(result);
             
+    }
+    
+    private static async Task<IResult> GetReservationByUserId(
+        ClaimsPrincipal user, 
+        IReservationService reservationService)
+    {
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                     ?? user.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var reservations = await reservationService.GetReservationsByUserIdAsync(userId);
+        var result = reservations.ToList();
+        return Results.Ok(new {
+            data = result,
+            count = result.Count
+        });
+            
+    }
+    
+    
+    private static async Task<IResult> CancelReservation(
+        string id, 
+        ClaimsPrincipal user,
+        IReservationService reservationService)
+    {
+        
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                     ?? user.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Results.Unauthorized();
+        }
+        var result = await reservationService.CancelReservationAsync(id, userId);
+        return Results.Ok(new {
+            data = result
+        });
     }
 }

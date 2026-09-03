@@ -115,6 +115,7 @@ public class ReservationService : IReservationService
             TotalPrice = reservationEntity.TotalPrice,
         };
     }
+    
 
     public async Task<IEnumerable<ReservationResponseDto>> GetReservationsByUserIdAsync(string userId)
     {
@@ -136,18 +137,30 @@ public class ReservationService : IReservationService
         }).ToList();
     }
 
-    public async Task<bool> CancelReservationAsync(string id)
+    public async Task<bool> CancelReservationAsync(string id, string userId)
     {
+        var reservation = await _unitOfWork.Reservations.GetReservationByIdAndUserIdAsync(id, userId);
+
+        if (reservation == null)
+        {
+            throw new KeyNotFoundException("Reservation not found or you do not have permission to modify it.");
+        }
         var reservationEntity = await _unitOfWork.Reservations.GetByIdAsync(id);
         if (reservationEntity == null) return false;
-        
+       
         _unitOfWork.Reservations.Delete(reservationEntity);
         await _unitOfWork.CompleteAsync();
         return true;
     }
 
-    public async Task<bool> UpdateReservationAsync(string reservationId, UpdateReservationDto updateReservationDto)
+    public async Task<bool> UpdateReservationAsync(string reservationId,string userId, UpdateReservationDto updateReservationDto)
     {
+        var reservation = await _unitOfWork.Reservations.GetReservationByIdAndUserIdAsync(reservationId, userId);
+
+        if (reservation == null)
+        {
+            throw new KeyNotFoundException("Reservation not found or you do not have permission to modify it.");
+        }
         var reservationEntity = await _unitOfWork.Reservations.GetByIdAsync(reservationId);
         if (reservationEntity == null) return false;
 

@@ -1,4 +1,6 @@
-﻿using CarRenter.DB.DTOs.Auth;
+﻿using System.Security.Claims;
+using CarRenter.DB.DTOs.Auth;
+using CarRenter.DB.DTOs.Users;
 using CarRenter.DB.Models;
 using CarRenter.DB.Services.Interfaces;
 using FluentValidation;
@@ -14,6 +16,8 @@ public static class UserEndpoints
         group.MapGet("/", () => "Hi Users!");
         group.MapPost("/register", RegisterUser);
         group.MapPost("/login", LoginUser);
+        group.MapGet("/profile", GetProfileAsync).RequireAuthorization();
+        group.MapPut("/profile", UpdateProfileAsync).RequireAuthorization();
     }
     
     private static async Task<IResult> RegisterUser(RegisterDto dto, IUserService userService, IValidator<RegisterDto> validator)
@@ -75,7 +79,8 @@ public static class UserEndpoints
         var user = await userService.GetUserByEmailAsync(dto.Email);
         if (user == null)
         {
-            return Results.BadRequest(new { Message = "Invalid email or password"});
+            var errors = new List<string> { "Invalid email or password" };
+            return Results.BadRequest(errors.Select(e => new { Error = e }));
         }
         
         var isPasswordValid = await userService.CheckPasswordAsync(user, dto.Password);
@@ -94,5 +99,42 @@ public static class UserEndpoints
         {
             token
         });
+    }
+
+    private static async Task<IResult> GetProfileAsync(ClaimsPrincipal user, IUserService userService)
+    {
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Results.Unauthorized();
+
+            var profile = await userService.GetProfileAsync(userId);
+            if (profile != null) return Results.Ok(profile);
+            var errors = new List<string> { "User not found" };
+            return Results.NotFound(errors.Select(e => new { Error = e }));
+        }
+    }
+    
+    private static async Task<IResult> UpdateProfileAsync (
+        ClaimsPrincipal user,
+        UpdateProfileDto dto,
+        IValidator<UpdateProfileDto> validator,
+        IUserService userService) 
+    {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+            return Results.Unauthorized();
+
+
+        var validationResult = await validator.ValidateAsync(dto);
+        if (!validationResult.IsValid)
+        {
+            return Results.ValidationProblem(validationResult.ToDictionary());
+        }
+
+        var updated = await userService.UpdateProfileAsync(userId, dto);
+        if (updated) return Results.Ok(new { Message = "Profile updated successfully." });
+        var errors = new List<string> { "Failed to update profile." };
+        return Results.NotFound(errors.Select(e => new { Error = e }));
     }
 }

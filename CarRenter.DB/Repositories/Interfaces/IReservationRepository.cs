@@ -10,4 +10,5 @@ public interface IReservationRepository: IGenericRepository<Reservation>
         string? currentReservationId = null);
 
     Task<IEnumerable<Reservation>> GetReservationsWithDetailsByUserIdAsync(string userId);
+    public Task<Reservation?> GetReservationByIdAndUserIdAsync(string id, string userId);
 }

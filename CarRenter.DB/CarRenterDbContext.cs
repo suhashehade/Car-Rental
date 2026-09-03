@@ -12,7 +12,6 @@ public class CarRenterDbContext: IdentityDbContext<User>
    public CarRenterDbContext(DbContextOptions<CarRenterDbContext> options)
       : base(options) { }
    
-   public DbSet<Address> Addresses { get; set; }
    public DbSet<Car> Cars { get; set; }
    public DbSet<Reservation> Reservations { get; set; }
    public DbSet<Preference> Preferences { get; set; }
@@ -31,6 +30,9 @@ public class CarRenterDbContext: IdentityDbContext<User>
        modelBuilder.Entity<User>().ToTable("Users");
        
        modelBuilder.Entity<User>()
+           .OwnsOne(u => u.Address);
+       
+       modelBuilder.Entity<User>()
            .HasIndex(u => u.Email)
            .IsUnique();
        
@@ -44,11 +46,6 @@ public class CarRenterDbContext: IdentityDbContext<User>
            .HasForeignKey(r => r.UserId)
            .OnDelete(DeleteBehavior.Cascade);
        
-       modelBuilder.Entity<User>()
-           .HasOne<Address>(u => u.Address)
-           .WithOne(a => a.User)
-           .HasForeignKey<Address>(a => a.UserId)
-           .OnDelete(DeleteBehavior.Cascade);
 
        modelBuilder.Entity<Reservation>()
            .HasMany<Preference>(r => r.Preferences)
