@@ -24,6 +24,16 @@ internal abstract class MainClass
     {
         var builder = WebApplication.CreateBuilder(args);
         
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:5500") // روابط الفرونت إند
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
         builder.Services.AddOpenApi();
         
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -93,7 +103,11 @@ internal abstract class MainClass
         
         var app = builder.Build();
         
-       
+        app.UseCors("AllowFrontend");
+
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
+        
         app.UseAuthentication();
         app.UseAuthorization(); 
         
@@ -116,6 +130,7 @@ internal abstract class MainClass
 
         app.UseHttpsRedirection();
         app.UseExceptionHandler();
+        
         await app.RunAsync();
     }
 }

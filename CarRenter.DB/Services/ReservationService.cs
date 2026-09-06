@@ -52,50 +52,59 @@ public class ReservationService : IReservationService
         return await _userManager.FindByEmailAsync(email);
     }
     
-    public async Task<ReservationResponseDto> CreateReservationAsync(string userId,CreateReservationDto createReservationDto)
+    public async Task<ReservationResponseDto> CreateReservationAsync(string userId, CreateReservationDto createReservationDto)
     {
+        if (createReservationDto.EndDate <= createReservationDto.StartDate)
+        {
+            throw new ArgumentException("End date must be greater than start date.");
+        }
+
+        if (createReservationDto.StartDate < DateTime.UtcNow.AddMinutes(-5)) 
+        {
+            throw new ArgumentException("Start date cannot be in the past.");
+        }
+        
         var car = await GetCar(createReservationDto.CarId);
-        //var user = await GetUserById(createReservationDto.UserId);
-        if (car == null)      
+        if (car == null)
         {
             throw new KeyNotFoundException($"Car with ID '{createReservationDto.CarId}' was not found.");
         }
-
-        bool isUserReserve = await HasUserOverlapAsync(userId, createReservationDto.StartDate, createReservationDto.EndDate);
-        bool isCarReserved = await HasCarOverlapAsync(createReservationDto.CarId, createReservationDto.StartDate, createReservationDto.EndDate);
         
+        bool isUserReserve = await HasUserOverlapAsync(userId, createReservationDto.StartDate, createReservationDto.EndDate);
         if (isUserReserve)
         {
-            throw new InvalidOperationException("You already have a conflicting reservation during this period.");
+            throw new InvalidOperationException("There is already have a conflicting reservation during this period.");
         }
 
+        bool isCarReserved = await HasCarOverlapAsync(createReservationDto.CarId, createReservationDto.StartDate, createReservationDto.EndDate);
         if (isCarReserved)
         {
             throw new InvalidOperationException("The car is already reserved during this period.");
         }
-
+        
         var totalPrice = CalculateTotalPrice(createReservationDto.StartDate, createReservationDto.EndDate, car);
         
-        var reservationEntity = new Reservation()
+        var reservationEntity = new Reservation
         {
             CarId = createReservationDto.CarId,
             StartDate = createReservationDto.StartDate,
             EndDate = createReservationDto.EndDate,
             UserId = userId,
             Location = createReservationDto.Location,
-            TotalPrice = totalPrice,
+            TotalPrice = totalPrice
         };
         
         await _unitOfWork.Reservations.AddAsync(reservationEntity);
         await _unitOfWork.CompleteAsync();
         
-        return new ReservationResponseDto()
+        return new ReservationResponseDto
         {
             ReservationId = reservationEntity.Id,
             StartDate = reservationEntity.StartDate,
             EndDate = reservationEntity.EndDate,
             CarName = $"{car.Brand} {car.Model}",
             TotalPrice = reservationEntity.TotalPrice,
+            Location = reservationEntity.Location
         };
     }
 

@@ -13,8 +13,8 @@ public static class CarEndpoints
         var group = app.MapGroup("/api/cars").RequireAuthorization();
         
         group.MapGet("/", () => "Hi Cars!"); 
-        group.MapGet("/available", GetAvailableCars);
-        group.MapGet("/search", SearchCars);
+        group.MapGet("/available", GetAvailableCars).RequireAuthorization();
+        group.MapGet("/search", SearchCars).RequireAuthorization();
 
         
         var adminGroup = group.MapGroup("/")

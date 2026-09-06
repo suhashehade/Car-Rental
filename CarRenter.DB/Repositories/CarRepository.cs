@@ -12,7 +12,7 @@ public class CarRepository(CarRenterDbContext context) : GenericRepository<Car>(
     public async Task<IEnumerable<Car>> GetAvailableCarsAsync()
     {
         return await _context.Cars
-            .Where(c => !c.Reservations.Any(r => r.EndDate > DateTime.UtcNow))
+            .AsNoTracking()
             .ToListAsync();
     }
 
@@ -84,11 +84,9 @@ public class CarRepository(CarRenterDbContext context) : GenericRepository<Car>(
             ))
         });
 
-        if (filter.IsAvailable.HasValue && filter.IsAvailable.Value)
-        {
-            responseQuery = responseQuery.Where(dto => dto.IsAvailable);
-        }
-
+     
+        responseQuery = responseQuery.Where(dto => dto.IsAvailable);
+        
         return await responseQuery.ToListAsync();
         
     }

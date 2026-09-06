@@ -7,4 +7,5 @@ public class ReservationResponseDto
     public DateTime EndDate { get; set; }
     public decimal TotalPrice { get; set; }
     public string CarName  { get; set; } = string.Empty;
+    public string Location  { get; set; } = string.Empty;
 }
