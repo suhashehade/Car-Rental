@@ -96,6 +96,54 @@ internal abstract class MainClass
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
                 };
+                
+                options.Events = new JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+
+                var authFailure = context.AuthenticateFailure;
+                
+                if (authFailure is SecurityTokenExpiredException)
+                {
+                    context.Response.Headers.Append("X-Token-Status", "Expired");
+                    context.Response.Headers.Append("WWW-Authenticate", "Bearer error=\"token_expired\"");
+
+                    return context.Response.WriteAsync("""
+                        {
+                            "statusCode": 401,
+                            "errorCode": "TOKEN_EXPIRED",
+                            "message": "Access token has expired. Please refresh your token."
+                        }
+                    """);
+                }
+                
+                if (authFailure is SecurityTokenInvalidSignatureException || authFailure is SecurityTokenException)
+                {
+                    context.Response.Headers.Append("X-Token-Status", "InvalidSignature");
+                    context.Response.Headers.Append("WWW-Authenticate", "Bearer error=\"invalid_signature\"");
+
+                    return context.Response.WriteAsync("""
+                        {
+                            "statusCode": 401,
+                            "errorCode": "FORCE_LOGOUT",
+                            "message": "Token signature is invalid. Please log in again."
+                        }
+                    """);
+                }
+                
+                return context.Response.WriteAsync("""
+                    {
+                        "statusCode": 401,
+                        "errorCode": "UNAUTHORIZED",
+                        "message": "You are not authorized to access this resource."
+                    }
+                """);
+            }
+        };
             });
 
         builder.Services.AddAuthorization();
