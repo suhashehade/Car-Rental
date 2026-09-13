@@ -3,64 +3,23 @@ using CarRenter.DB.Models;
 using CarRenter.DB.Repositories.Interfaces;
 using CarRenter.DB.Services.Interfaces;
 using CarRenter.DB.Validators;
-using Microsoft.AspNetCore.Identity;
 
 namespace CarRenter.DB.Services;
 
-public class ReservationService : IReservationService
+public class ReservationService(IUnitOfWork unitOfWork, IReservationValidator validator)
+    : IReservationService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly UserManager<User> _userManager;
-    private readonly IReservationValidator _validator;
-    
-    public ReservationService(IUnitOfWork unitOfWork, UserManager<User> userManager,  IReservationValidator validator)
+    private async Task<Car?> GetCarAsync(string carId)
     {
-        _unitOfWork = unitOfWork;
-        _validator = validator;
-    }
-    
-    private async Task<bool> HasUserOverlapAsync(string userId, DateTime startDate, DateTime endDate, string? currentReservationId = null)
-    {
-        return await _unitOfWork.Reservations.HasUserOverlapAsync(userId, startDate, endDate, currentReservationId);
-    }
-
-    private async Task<bool> HasCarOverlapAsync(string carId, DateTime startDate, DateTime endDate, string? currentReservationId = null)
-    {
-        return await _unitOfWork.Reservations.HasCarOverlapAsync(carId, startDate, endDate, currentReservationId);
-    }
-
-    private decimal CalculateTotalPrice(DateTime startDate, DateTime endDate, Car car)
-    {
-        var totalHours = (decimal)(endDate - startDate).TotalHours;
-        if (totalHours <= 0)
-        {
-            throw new ArgumentException("The end date must be greater than start date.");
-        }
-
-        return totalHours * car.HourlyPrice; 
-    }
-
-    private async Task<Car?> GetCar(string carId)
-    {
-        return await _unitOfWork.Cars.GetByIdAsync(carId);
-    }
-    
-    private async Task<User?> GetUserById(string userId)
-    {
-        return await _userManager.FindByIdAsync(userId);
-    }
-    
-    private async Task<User?> GetUserByEmail(string email)
-    {
-        return await _userManager.FindByEmailAsync(email);
+        return await unitOfWork.Cars.GetByIdAsync(carId);
     }
     
     public async Task<ReservationResponseDto> CreateReservationAsync(string userId, CreateReservationDto createReservationDto)
     {
-        await _validator.ValidateReservationAsync(userId, createReservationDto.CarId, createReservationDto.StartDate, createReservationDto.EndDate);
+        await validator.ValidateReservationAsync(userId, createReservationDto.CarId, createReservationDto.StartDate, createReservationDto.EndDate);
         
-        var car = await _unitOfWork.Cars.GetByIdAsync(createReservationDto.CarId);
-        var totalPrice = CalculateTotalPrice(createReservationDto.StartDate, createReservationDto.EndDate, car!);
+        var car = await GetCarAsync(createReservationDto.CarId);
+        var totalPrice = Utils.Utils.CalculateTotalPrice(createReservationDto.StartDate, createReservationDto.EndDate, car!);
         
         var reservationEntity = new Reservation
         {
@@ -72,15 +31,15 @@ public class ReservationService : IReservationService
             TotalPrice = totalPrice
         };
         
-        await _unitOfWork.Reservations.AddAsync(reservationEntity);
-        await _unitOfWork.CompleteAsync();
+        await unitOfWork.Reservations.AddAsync(reservationEntity);
+        await unitOfWork.CompleteAsync();
         
         return new ReservationResponseDto
         {
             ReservationId = reservationEntity.Id,
             StartDate = reservationEntity.StartDate,
             EndDate = reservationEntity.EndDate,
-            CarName = $"{car.Brand} {car.Model}",
+            CarName = $"{car?.Brand} {car?.Model}",
             TotalPrice = reservationEntity.TotalPrice,
             Location = reservationEntity.Location
         };
@@ -88,81 +47,72 @@ public class ReservationService : IReservationService
 
     public async Task<ReservationResponseDto?> GetReservationByIdAsync(string id)
     {
-        var reservationEntity = await _unitOfWork.Reservations.GetByIdAsync(id);
+        var reservationEntity = await unitOfWork.Reservations.GetByIdAsync(id);
         if (reservationEntity == null) return null;
 
-        var car = await GetCar(reservationEntity.CarId);
+        var car = await GetCarAsync(reservationEntity.CarId);
 
-        return new ReservationResponseDto()
+        return new ReservationResponseDto
         {
             ReservationId = reservationEntity.Id,
             StartDate = reservationEntity.StartDate,
             EndDate = reservationEntity.EndDate,
             CarName = car != null ? $"{car.Brand} {car.Model}" : "N/A",
             TotalPrice = reservationEntity.TotalPrice,
+            Location = reservationEntity.Location
         };
     }
-    
 
     public async Task<IEnumerable<ReservationResponseDto>> GetReservationsByUserIdAsync(string userId)
     {
-        var reservations = await _unitOfWork.Reservations.GetReservationsWithDetailsByUserIdAsync(userId);
+        var reservations = await unitOfWork.Reservations.GetReservationsWithDetailsByUserIdAsync(userId);
 
-        var enumerable = reservations as Reservation[] ?? reservations.ToArray();
-        if (enumerable.Length == 0)
-        {
-            return [];
-        }
-    
-        return enumerable.Select(reservation => new ReservationResponseDto()
+        return reservations.Select(reservation => new ReservationResponseDto
         {
             ReservationId = reservation.Id,
             StartDate = reservation.StartDate,
             EndDate = reservation.EndDate,
-            CarName = $"{reservation.Car.Brand} {reservation.Car.Model}",
-            TotalPrice = reservation.TotalPrice,
+            CarName = reservation?.Car != null ? $"{reservation?.Car.Brand} {reservation?.Car.Model}" : "N/A",
+            TotalPrice = reservation?.TotalPrice ?? 0,
+            Location = reservation?.Location ?? "N/A"
         }).ToList();
     }
 
     public async Task<bool> CancelReservationAsync(string id, string userId)
     {
-        var reservation = await _unitOfWork.Reservations.GetReservationByIdAndUserIdAsync(id, userId);
+        var reservation = await unitOfWork.Reservations.GetReservationByIdAndUserIdAsync(id, userId);
 
         if (reservation == null)
         {
             throw new KeyNotFoundException("Reservation not found or you do not have permission to modify it.");
         }
-        var reservationEntity = await _unitOfWork.Reservations.GetByIdAsync(id);
-        if (reservationEntity == null) return false;
-       
-        _unitOfWork.Reservations.Delete(reservationEntity);
-        await _unitOfWork.CompleteAsync();
+
+        unitOfWork.Reservations.Delete(reservation);
+        await unitOfWork.CompleteAsync();
         return true;
     }
 
-    public async Task<bool> UpdateReservationAsync(string reservationId,string userId, UpdateReservationDto updateReservationDto)
+    public async Task<bool> UpdateReservationAsync(string reservationId, string userId, UpdateReservationDto updateReservationDto)
     {
-        var reservation = await _unitOfWork.Reservations.GetReservationByIdAndUserIdAsync(reservationId, userId);
-
+        var reservation = await unitOfWork.Reservations.GetReservationByIdAndUserIdAsync(reservationId, userId);
         if (reservation == null)
         {
             throw new KeyNotFoundException("Reservation not found or you do not have permission to modify it.");
         }
-        var reservationEntity = await _unitOfWork.Reservations.GetByIdAsync(reservationId);
-       
-        await _validator.ValidateReservationAsync(userId, updateReservationDto.CarId, updateReservationDto.StartDate, updateReservationDto.EndDate);
-        var car = await GetCar(updateReservationDto.CarId);
-       
-        var totalPrice = CalculateTotalPrice(updateReservationDto.StartDate, updateReservationDto.EndDate, car);
         
-        reservationEntity?.StartDate = updateReservationDto.StartDate;
-        reservationEntity?.EndDate = updateReservationDto.EndDate;
-        reservationEntity?.Location = updateReservationDto.Location;
-        reservationEntity?.CarId = updateReservationDto.CarId;
-        reservationEntity?.TotalPrice = totalPrice;
+        await validator.ValidateReservationAsync(userId, updateReservationDto.CarId, updateReservationDto.StartDate, updateReservationDto.EndDate, reservationId);
         
-        _unitOfWork.Reservations.Update(reservationEntity);
-        await _unitOfWork.CompleteAsync();
+        var car = await GetCarAsync(updateReservationDto.CarId);
+        var totalPrice = Utils.Utils.CalculateTotalPrice(updateReservationDto.StartDate, updateReservationDto.EndDate, car!);
+        
+        reservation.StartDate = updateReservationDto.StartDate;
+        reservation.EndDate = updateReservationDto.EndDate;
+        reservation.Location = updateReservationDto.Location;
+        reservation.CarId = updateReservationDto.CarId;
+        reservation.TotalPrice = totalPrice;
+        
+        unitOfWork.Reservations.Update(reservation);
+        await unitOfWork.CompleteAsync();
     
         return true;
     }

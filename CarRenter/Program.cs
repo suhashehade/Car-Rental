@@ -29,7 +29,7 @@ internal abstract class MainClass
         {
             options.AddPolicy("AllowFrontend", policy =>
             {
-                policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:5500") // روابط الفرونت إند
+                policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:5500") 
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -60,7 +60,7 @@ internal abstract class MainClass
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         builder.Services.AddScoped<ICarService, CarService>();
         builder.Services.AddScoped<IReservationService, ReservationService>();
-     
+        
         
         builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("JwtConfig"));
         builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
