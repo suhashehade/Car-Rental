@@ -10,39 +10,38 @@ public static class CarEndpoints
 {
     public static void MapCarEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/cars").RequireAuthorization();
+        var group = app.MapGroup("/api/cars");
         
-        group.MapGet("/", () => "Hi Cars!"); 
-        group.MapGet("/available", GetAvailableCars).RequireAuthorization();
-        group.MapGet("/search", SearchCars).RequireAuthorization();
+        group.MapGet("/",[Authorize] () => "Hi Cars!"); 
+        group.MapGet("/available", GetAvailableCars);
+        group.MapGet("/search", SearchCars);
 
         
-        var adminGroup = group.MapGroup("/")
-            .RequireAuthorization(r => r.RequireRole("Admin"));
+        var adminGroup = group.MapGroup("/");
 
         adminGroup.MapPost("/", CreateCar);
         adminGroup.MapPut("/{id}", UpdateCar);
         adminGroup.MapDelete("/{id}", DeleteCar);
 
     }
-
+    [Authorize]
     private static async Task<IResult> GetAvailableCars(ICarService carService)
     {
         var availableCars = await carService.GetAvailableCarsAsync();
         var result = availableCars.ToList();
         return Results.Ok(new {data = result, count = result.Count });
     }
-
+    [Authorize(Roles = "Admin")]
     private static Task UpdateCar(HttpContext context)
     {
         throw new NotImplementedException();
     }
-
+    [Authorize(Roles = "Admin")]
     private static Task CreateCar(HttpContext context)
     {
         throw new NotImplementedException();
     }
-
+    [Authorize]
     private static async Task<IResult> SearchCars([AsParameters]CarSearchFilterDto filter, ICarService carService, IValidator<CarSearchFilterDto> validator)
     {
         var validationResult = await validator.ValidateAsync(filter);
@@ -55,7 +54,7 @@ public static class CarEndpoints
         var result = response.ToList();
         return Results.Ok(new {data = result, count = result.Count});
     }
-
+    [Authorize(Roles = "Admin")]
     private static Task  DeleteCar(HttpContext context)
     {
         throw new NotImplementedException();

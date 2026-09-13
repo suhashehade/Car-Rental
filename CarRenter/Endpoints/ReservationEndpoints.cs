@@ -11,14 +11,14 @@ public static class ReservationEndpoints
 {
     public static void MapReservationEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/reservations").RequireAuthorization();
+        var group = app.MapGroup("/api/reservations");
         
-        group.MapGet("/", () => "Hi Registers!").RequireAuthorization(new AuthorizeAttribute{ Roles = "Admin" });
+        group.MapGet("/", [Authorize(Roles = "Admin")] () => "Hi Registers!");
         group.MapPost("/", CreateReservation);
         group.MapGet("/user-reservations", GetReservationByUserId);
         group.MapDelete("/{id}", CancelReservation);
     }
-
+    [Authorize]
     private static async Task<IResult> CreateReservation(
         ClaimsPrincipal user, 
         CreateReservationDto dto, 
@@ -44,7 +44,7 @@ public static class ReservationEndpoints
             return Results.Ok(result);
             
     }
-    
+    [Authorize]
     private static async Task<IResult> GetReservationByUserId(
         ClaimsPrincipal user, 
         IReservationService reservationService)
@@ -66,7 +66,7 @@ public static class ReservationEndpoints
             
     }
     
-    
+    [Authorize]
     private static async Task<IResult> CancelReservation(
         string id, 
         ClaimsPrincipal user,

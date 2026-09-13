@@ -4,6 +4,7 @@ using CarRenter.DB.DTOs.Users;
 using CarRenter.DB.Models;
 using CarRenter.DB.Services.Interfaces;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CarRenter.Endpoints;
 
@@ -16,8 +17,8 @@ public static class UserEndpoints
         group.MapGet("/", () => "Hi Users!");
         group.MapPost("/register", RegisterUser);
         group.MapPost("/login", LoginUser);
-        group.MapGet("/profile", GetProfileAsync).RequireAuthorization();
-        group.MapPut("/profile", UpdateProfileAsync).RequireAuthorization();
+        group.MapGet("/profile", GetProfileAsync);
+        group.MapPut("/profile", UpdateProfileAsync);
     }
     
     private static async Task<IResult> RegisterUser(RegisterDto dto, IUserService userService, IValidator<RegisterDto> validator)
@@ -100,7 +101,7 @@ public static class UserEndpoints
             token
         });
     }
-
+    [Authorize]
     private static async Task<IResult> GetProfileAsync(ClaimsPrincipal user, IUserService userService)
     {
         {
@@ -114,7 +115,7 @@ public static class UserEndpoints
             return Results.NotFound(errors.Select(e => new { Error = e }));
         }
     }
-    
+    [Authorize]
     private static async Task<IResult> UpdateProfileAsync (
         ClaimsPrincipal user,
         UpdateProfileDto dto,
