@@ -7,6 +7,7 @@ using CarRenter.DB.Repositories.Interfaces;
 using CarRenter.DB.Seed;
 using CarRenter.DB.Services;
 using CarRenter.DB.Services.Interfaces;
+using CarRenter.DB.Validators;
 using CarRenter.Endpoints;
 using CarRenter.Middlewares;
 using CarRenter.Validators;
@@ -54,7 +55,7 @@ internal abstract class MainClass
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<CarRenterDbContext>() 
             .AddDefaultTokenProviders();
-       
+        builder.Services.AddScoped<IReservationValidator, ReservationValidator>();
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
         builder.Services.AddScoped<ICarService, CarService>();
